@@ -33,7 +33,7 @@ const PROVIDER_DESCRIPTIONS: Record<ProviderName, string> = {
 };
 
 // Add a constant for the Ollama API base URL
-const OLLAMA_API_URL = 'http://127.0.0.1:11434';
+const OLLAMA_API_URL = '/api/ollama';
 
 interface OllamaModel {
   name: string;
@@ -152,10 +152,8 @@ export default function LocalProvidersTab() {
   const fetchOllamaModels = async () => {
     try {
       setIsLoadingModels(true);
-
-      const response = await fetch('http://127.0.0.1:11434/api/tags');
+      const response = await fetch(`${OLLAMA_API_URL}/models`);
       const data = (await response.json()) as { models: OllamaModel[] };
-
       setOllamaModels(
         data.models.map((model) => ({
           ...model,
@@ -171,40 +169,28 @@ export default function LocalProvidersTab() {
 
   const updateOllamaModel = async (modelName: string): Promise<boolean> => {
     try {
-      const response = await fetch(`${OLLAMA_API_URL}/api/pull`, {
+      const response = await fetch(`${OLLAMA_API_URL}/pull`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: modelName }),
       });
 
-      if (!response.ok) {
-        throw new Error(`Failed to update ${modelName}`);
-      }
+      if (!response.ok) throw new Error(`Failed to update ${modelName}`);
 
       const reader = response.body?.getReader();
-
-      if (!reader) {
-        throw new Error('No response reader available');
-      }
+      if (!reader) throw new Error('No response reader available');
 
       while (true) {
         const { done, value } = await reader.read();
-
-        if (done) {
-          break;
-        }
-
+        if (done) break;
         const text = new TextDecoder().decode(value);
         const lines = text.split('\n').filter(Boolean);
-
         for (const line of lines) {
           const rawData = JSON.parse(line);
-
           if (!isOllamaPullResponse(rawData)) {
             console.error('Invalid response format:', rawData);
             continue;
           }
-
           setOllamaModels((current) =>
             current.map((m) =>
               m.name === modelName
@@ -223,7 +209,8 @@ export default function LocalProvidersTab() {
         }
       }
 
-      const updatedResponse = await fetch('http://127.0.0.1:11434/api/tags');
+      // Refetch updated models after update
+      const updatedResponse = await fetch(`${OLLAMA_API_URL}/models`);
       const updatedData = (await updatedResponse.json()) as { models: OllamaModel[] };
       const updatedModel = updatedData.models.find((m) => m.name === modelName);
 
@@ -280,17 +267,12 @@ export default function LocalProvidersTab() {
 
   const handleDeleteOllamaModel = async (modelName: string) => {
     try {
-      const response = await fetch(`${OLLAMA_API_URL}/api/delete`, {
+      const response = await fetch(`${OLLAMA_API_URL}/delete`, {
         method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: modelName }),
       });
-
-      if (!response.ok) {
-        throw new Error(`Failed to delete ${modelName}`);
-      }
+      if (!response.ok) throw new Error(`Failed to delete ${modelName}`);
 
       setOllamaModels((current) => current.filter((m) => m.name !== modelName));
       toast(`Deleted ${modelName}`);

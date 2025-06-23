@@ -161,7 +161,7 @@ export class LLMManager {
       serverEnv,
     });
 
-    if (cachedModels) {
+    if (cachedModels?.length) {
       logger.info(`Found ${cachedModels.length} cached models for ${provider.name}`);
       return [...cachedModels, ...staticModels];
     }
