@@ -96,7 +96,7 @@ export default class OllamaProvider extends BaseProvider {
       name: model.name,
       label: `${model.name} (${model.details.parameter_size})`,
       provider: this.name,
-      maxTokenAllowed: 8000,
+      maxTokenAllowed: 32768,
     }));
   }
 
